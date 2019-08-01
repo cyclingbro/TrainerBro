@@ -1,26 +1,62 @@
-import React from 'react';
-import logo from './logo.svg';
+import React, { Component } from 'react';
 import './App.css';
 
-const App: React.FC = () => {
-  return (
+type TbState = {
+  Trainer?: BluetoothDevice,
+  Power: number
+}
+
+class App extends Component<{}, TbState> {
+
+  constructor(props: Readonly<{}>) {
+    super(props)
+    this.state = {
+      Trainer: undefined,
+      Power: 0
+    }
+  }
+
+  scanForTrainers = () => {
+    navigator.bluetooth.requestDevice({ filters: [{
+      services: ['cycling_power']
+    }] }).then(
+      device => {
+        this.setState({
+          Trainer: device
+        })
+
+        console.log("Connected " + device.id + ": " + device.name)
+      }
+    )
+  }
+
+  logWatts = async () => {
+    const trainer = this.state.Trainer!
+    try {
+      const server = await trainer.gatt!.connect()
+      const powerSvc = await server.getPrimaryService('cycling_power')
+      const intervalId = setInterval(() => {
+        powerSvc.getCharacteristic('cycling_power_measurement').then(
+          measurement => {
+              console.log(measurement)
+          }
+        )
+      }, 1000)
+      
+    }
+    catch(exception) {
+      console.log(exception)
+    }
+  }
+
+  render() {
+    return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <button onClick={this.scanForTrainers}>Scan for trainers</button>
+      <button onClick={this.logWatts}>Log Watts</button>
     </div>
-  );
+    )
+  }
 }
 
 export default App;
