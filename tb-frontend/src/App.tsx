@@ -1,62 +1,56 @@
-import React, { Component } from 'react';
-import './App.css';
+import React, { Component } from "react";
+import "./App.css";
+import PowerDisplay from "./Power/Display";
 
 type TbState = {
-  Trainer?: BluetoothDevice,
-  Power: number
-}
+  Trainer?: BluetoothDevice;
+  Service?: BluetoothRemoteGATTService;
+};
 
 class App extends Component<{}, TbState> {
-
   constructor(props: Readonly<{}>) {
-    super(props)
+    super(props);
     this.state = {
       Trainer: undefined,
-      Power: 0
-    }
+      Service: undefined
+    };
   }
+
+  componentDidMount = () => {
+    //this.scanForTrainers()
+  };
 
   scanForTrainers = () => {
-    navigator.bluetooth.requestDevice({ filters: [{
-      services: ['cycling_power']
-    }] }).then(
-      device => {
-        this.setState({
-          Trainer: device
-        })
-
-        console.log("Connected " + device.id + ": " + device.name)
-      }
-    )
-  }
-
-  logWatts = async () => {
-    const trainer = this.state.Trainer!
-    try {
-      const server = await trainer.gatt!.connect()
-      const powerSvc = await server.getPrimaryService('cycling_power')
-      const intervalId = setInterval(() => {
-        powerSvc.getCharacteristic('cycling_power_measurement').then(
-          measurement => {
-              console.log(measurement)
+    let bluetoothServer = {} as TbState;
+    navigator.bluetooth
+      .requestDevice({
+        filters: [
+          {
+            services: ["cycling_power"]
           }
-        )
-      }, 1000)
-      
-    }
-    catch(exception) {
-      console.log(exception)
-    }
-  }
+        ]
+      })
+      .then(device => {
+        bluetoothServer.Trainer = device;
+        device.gatt!.connect().then(server => {
+          server.getPrimaryService("cycling_power").then(service => {
+            bluetoothServer.Service = service;
+            this.setState(bluetoothServer);
+            console.log("Connected " + device.id + ": " + device.name);
+            console.log(bluetoothServer.Service);
+          });
+        });
+      });
+  };
 
-  render() {
+  render = () => {
     return (
-    <div className="App">
-      <button onClick={this.scanForTrainers}>Scan for trainers</button>
-      <button onClick={this.logWatts}>Log Watts</button>
-    </div>
-    )
-  }
+      <div className="App">
+        <button onClick={this.scanForTrainers}>Scan for trainers</button>
+        <PowerDisplay Service={this.state.Service}></PowerDisplay>
+      </div>
+    );
+  };
 }
 
 export default App;
