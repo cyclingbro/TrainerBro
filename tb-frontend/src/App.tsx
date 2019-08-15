@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import "./App.css";
 import PowerDisplay from "./Power/Display";
+import PowerControl from "./Power/Control";
 
 type TbState = {
   Trainer?: BluetoothDevice;
@@ -48,6 +49,7 @@ class App extends Component<{}, TbState> {
       <div className="App">
         <button onClick={this.scanForTrainers}>Scan for trainers</button>
         <PowerDisplay Service={this.state.Service}></PowerDisplay>
+        <PowerControl Service={this.state.Service}></PowerControl>
       </div>
     );
   };
