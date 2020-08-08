@@ -2,6 +2,8 @@ import React, { Component } from "react";
 import "./App.css";
 import PowerDisplay from "./Power/Display";
 import PowerControl from "./Power/Control";
+import { getService } from "./bluetooth";
+import { requestControlOfTrainer } from "./fitness-machine";
 
 type TbState = {
   Trainer?: BluetoothDevice;
@@ -12,7 +14,6 @@ class App extends Component<{}, TbState> {
   constructor(props: Readonly<{}>) {
     super(props);
     this.state = {
-      Trainer: undefined,
       Service: undefined
     };
   }
@@ -21,27 +22,21 @@ class App extends Component<{}, TbState> {
     //this.scanForTrainers()
   };
 
-  scanForTrainers = () => {
+  scanForTrainers = async () => {
     let bluetoothServer = {} as TbState;
-    navigator.bluetooth
-      .requestDevice({
-        filters: [
-          {
-            services: ["cycling_power"]
-          }
-        ]
-      })
-      .then(device => {
-        bluetoothServer.Trainer = device;
-        device.gatt!.connect().then(server => {
-          server.getPrimaryService("cycling_power").then(service => {
-            bluetoothServer.Service = service;
-            this.setState(bluetoothServer);
-            console.log("Connected " + device.id + ": " + device.name);
-            console.log(bluetoothServer.Service);
-          });
-        });
-      });
+    const fitnessMachine = await getService(
+      navigator.bluetooth,
+      "fitness_machine"
+    );
+    await requestControlOfTrainer(fitnessMachine);
+    bluetoothServer.Service = fitnessMachine;
+    this.setState(bluetoothServer);
+    console.log(
+      "Connected " +
+        fitnessMachine.device.id +
+        ": " +
+        fitnessMachine.device.name
+    );
   };
 
   render = () => {
