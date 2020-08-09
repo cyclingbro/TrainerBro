@@ -4,7 +4,16 @@ export async function requestControlOfTrainer(
   const controlPoint = await getControlPointCharacteristic(
     fitnessMachineService
   );
-  controlPoint.writeValue(Uint8Array.of(0x00));
+  await controlPoint.writeValue(Uint8Array.of(0x00));
+}
+
+export async function startTrainer(
+  fitnessMachineService: BluetoothRemoteGATTService
+) {
+  const controlPoint = await getControlPointCharacteristic(
+    fitnessMachineService
+  );
+  await controlPoint.writeValue(Uint8Array.of(0x07));
 }
 
 export async function setPower(
@@ -15,18 +24,18 @@ export async function setPower(
     fitnessMachineService
   );
 
-  controlPoint.writeValue(Uint8Array.of(0x05, power, power >> 8));
+  await controlPoint.writeValue(Uint8Array.of(0x05, power, power >> 8));
 }
 
 export async function subscribeToPowerUpdates(
   fitnessMachineService: BluetoothRemoteGATTService,
   subscriptionFunction: (description: string) => any
 ) {
-  const controlPoint = await getControlPointCharacteristic(
+  const fitnessMachineStatus = await getFitnessMachineStatusCharacteristic(
     fitnessMachineService
   );
-  controlPoint.startNotifications();
-  controlPoint.oncharacteristicvaluechanged = event => {
+  fitnessMachineStatus.startNotifications();
+  fitnessMachineStatus.oncharacteristicvaluechanged = event => {
     const { value } = event.target as BluetoothRemoteGATTCharacteristic;
     if (!value) {
       return;
@@ -48,6 +57,12 @@ function getControlPointCharacteristic(
   return fitnessMachineService.getCharacteristic(
     "fitness_machine_control_point"
   );
+}
+
+function getFitnessMachineStatusCharacteristic(
+  fitnessMachineService: BluetoothRemoteGATTService
+) {
+  return fitnessMachineService.getCharacteristic("fitness_machine_status");
 }
 
 const opCodeToDefinition: {

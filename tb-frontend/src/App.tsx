@@ -3,7 +3,7 @@ import "./App.css";
 import PowerDisplay from "./Power/Display";
 import PowerControl from "./Power/Control";
 import { getService } from "./bluetooth";
-import { requestControlOfTrainer } from "./fitness-machine";
+import { requestControlOfTrainer, startTrainer } from "./fitness-machine";
 
 type TbState = {
   Trainer?: BluetoothDevice;
@@ -29,6 +29,7 @@ class App extends Component<{}, TbState> {
       "fitness_machine"
     );
     await requestControlOfTrainer(fitnessMachine);
+    await startTrainer(fitnessMachine);
     bluetoothServer.Service = fitnessMachine;
     this.setState(bluetoothServer);
     console.log(
