@@ -1,67 +1,33 @@
 import React, { Component } from "react";
-import { debounce } from "underscore";
-
+import { subscribeToPowerUpdates } from "../fitness-machine";
 type PowerDisplayProps = {
   Service?: BluetoothRemoteGATTService;
 };
 
 type PowerDisplayState = {
-  Watts: number;
+  Update: string;
 };
 
 class PowerDisplay extends Component<PowerDisplayProps, PowerDisplayState> {
   constructor(props: Readonly<PowerDisplayProps>) {
     super(props);
     this.state = {
-      Watts: 0
+      Update: "No updates as of yet"
     };
   }
 
-  parseData = (receivedCharacteristic: DataView | undefined) => {
-    console.log("received characteristic");
-    console.log(receivedCharacteristic);
-    if (receivedCharacteristic) {
-      const flags = receivedCharacteristic.getUint16(0);
-      const instantaneousPowerMeasure = receivedCharacteristic.getInt16(1);
-      this.setState({
-        Watts: instantaneousPowerMeasure
-      });
-    }
-  };
-
   componentWillReceiveProps = (props: PowerDisplayProps) => {
-    console.log("no service");
     if (props.Service) {
-      const powerSvc = props.Service;
-      console.log("has service");
-      powerSvc
-        .getCharacteristic("cycling_power_measurement")
-        .then(powerMeasurement => {
-          powerMeasurement.startNotifications();
-          powerMeasurement.oncharacteristicvaluechanged = event => {
-            const { value } = event.target as BluetoothRemoteGATTCharacteristic;
-            this.parseData(value);
-          };
-        });
-    }
-  };
-
-  stopNotifications = () => {
-    if (this.props.Service) {
-      const powerSvc = this.props.Service;
-      powerSvc
-        .getCharacteristic("cycling_power_measurement")
-        .then(powerMeasurement => {
-          powerMeasurement.stopNotifications();
-        });
+      subscribeToPowerUpdates(props.Service, description =>
+        this.setState({ Update: description })
+      );
     }
   };
 
   render = () => {
     return (
       <span>
-        <div>{this.state.Watts}</div>
-        <button onClick={this.stopNotifications}>Stop notifications</button>
+        <div>{this.state.Update}</div>
       </span>
     );
   };
