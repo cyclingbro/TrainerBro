@@ -1,19 +1,7 @@
-export async function requestControlOfTrainer(
+export async function requestControl(
   fitnessMachineService: BluetoothRemoteGATTService
 ) {
-  const controlPoint = await getControlPointCharacteristic(
-    fitnessMachineService
-  );
-  await controlPoint.writeValue(Uint8Array.of(0x00));
-}
 
-export async function startTrainer(
-  fitnessMachineService: BluetoothRemoteGATTService
-) {
-  const controlPoint = await getControlPointCharacteristic(
-    fitnessMachineService
-  );
-  await controlPoint.writeValue(Uint8Array.of(0x07));
 }
 
 export async function setPower(
@@ -21,48 +9,51 @@ export async function setPower(
   power: number
 ) {
   const controlPoint = await getControlPointCharacteristic(
-    fitnessMachineService
+    fitnessMachineService,
+    "00002ad9-0000-1000-8000-00805f9b34fb"
   );
 
-  await controlPoint.writeValue(Uint8Array.of(0x05, power, power >> 8));
+  console.log("Got control point characteristic");
+  // await controlPoint.writeValue(Uint8Array.of(0x05, power, power >> 8 & 0xFF));
+  // console.log("Wrote: " + power);
 }
 
 export async function subscribeToPowerUpdates(
-  fitnessMachineService: BluetoothRemoteGATTService,
+  cyclingPowerService: BluetoothRemoteGATTService,
   subscriptionFunction: (description: string) => any
 ) {
-  const fitnessMachineStatus = await getFitnessMachineStatusCharacteristic(
-    fitnessMachineService
+  const cyclingPowerStatus = await getCyclingPowerMeasurementCharacteristic(
+    cyclingPowerService
   );
-  fitnessMachineStatus.startNotifications();
-  fitnessMachineStatus.oncharacteristicvaluechanged = event => {
+  cyclingPowerStatus.startNotifications()
+  cyclingPowerStatus.oncharacteristicvaluechanged = event => {
     const { value } = event.target as BluetoothRemoteGATTCharacteristic;
     if (!value) {
       return;
     }
-    const opCode = value.getUint8(0);
-    const [opCodeDescription, opDisplayValueFunction] = opCodeToDefinition[
-      opCode
-    ];
-    const opCodeDisplayValue = opDisplayValueFunction
-      ? opDisplayValueFunction(value)
-      : "";
-    subscriptionFunction(`${opCodeDescription[0]}: ${opCodeDisplayValue}`);
+    const flagsString = dec2bin(value.getUint16(0));
+    const instantPower = value.getInt16(2, true);
+    subscriptionFunction(instantPower + "");
   };
 }
 
+function dec2bin(dec: any) {
+  return (dec >>> 0).toString(2);
+}
+
 function getControlPointCharacteristic(
-  fitnessMachineService: BluetoothRemoteGATTService
+  fitnessMachineService: BluetoothRemoteGATTService,
+  characteristicId: string
 ) {
   return fitnessMachineService.getCharacteristic(
-    "fitness_machine_control_point"
+    characteristicId
   );
 }
 
-function getFitnessMachineStatusCharacteristic(
+function getCyclingPowerMeasurementCharacteristic(
   fitnessMachineService: BluetoothRemoteGATTService
 ) {
-  return fitnessMachineService.getCharacteristic("fitness_machine_status");
+  return fitnessMachineService.getCharacteristic("00002a63-0000-1000-8000-00805f9b34fb");
 }
 
 const opCodeToDefinition: {

@@ -1,12 +1,17 @@
-async function getService(
-  bluetoothService: Bluetooth,
-  serviceName: string
-): Promise<BluetoothRemoteGATTService> {
+async function getServer(
+  bluetoothService: Bluetooth
+): Promise<BluetoothRemoteGATTServer> {
   const device = await bluetoothService.requestDevice({
     filters: [
       {
-        services: [serviceName]
+        services: ["fitness_machine"] // we need one for cycling power as well. don't know the exact string.
       }
+    ],
+    optionalServices: [
+      '0000180a-0000-1000-8000-00805f9b34fb', //Device Information
+      '00001816-0000-1000-8000-00805f9b34fb', // Cycling Speed & Cadence
+      '00001818-0000-1000-8000-00805f9b34fb', // Cycling Power
+      '00001826-0000-1000-8000-00805f9b34fb', // Fitness Machine
     ]
   });
 
@@ -14,9 +19,16 @@ async function getService(
     throw new Error("Unable to find bluetooth device");
   }
 
-  const server = await device.gatt.connect();
-  const service = await server.getPrimaryService(serviceName);
-  return service;
+  return device.gatt.connect();
 }
 
-export { getService };
+async function getServices(
+  server: BluetoothRemoteGATTServer
+): Promise<BluetoothRemoteGATTService[]> {
+  return Promise.all([
+    server.getPrimaryService("00001818-0000-1000-8000-00805f9b34fb"),
+    server.getPrimaryService("00001826-0000-1000-8000-00805f9b34fb")
+  ]);
+}
+
+export { getServer, getServices };

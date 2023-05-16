@@ -2,19 +2,19 @@ import React, { Component } from "react";
 import "./App.css";
 import PowerDisplay from "./Power/Display";
 import PowerControl from "./Power/Control";
-import { getService } from "./bluetooth";
-import { requestControlOfTrainer, startTrainer } from "./fitness-machine";
+import { getServices, getServer} from "./bluetooth";
 
 type TbState = {
-  Trainer?: BluetoothDevice;
-  Service?: BluetoothRemoteGATTService;
+  PowerRead?: BluetoothRemoteGATTService;
+  PowerSet?: BluetoothRemoteGATTService;
 };
 
 class App extends Component<{}, TbState> {
   constructor(props: Readonly<{}>) {
     super(props);
     this.state = {
-      Service: undefined
+      PowerRead: undefined,
+      PowerSet: undefined
     };
   }
 
@@ -24,19 +24,17 @@ class App extends Component<{}, TbState> {
 
   scanForTrainers = async () => {
     let bluetoothServer = {} as TbState;
-    const fitnessMachine = await getService(
-      navigator.bluetooth,
-      "fitness_machine"
+    const btServer = await getServer(
+      navigator.bluetooth
     );
-    await requestControlOfTrainer(fitnessMachine);
-    await startTrainer(fitnessMachine);
-    bluetoothServer.Service = fitnessMachine;
+
+    [ bluetoothServer.PowerRead, bluetoothServer.PowerSet ]= await getServices(btServer)
     this.setState(bluetoothServer);
     console.log(
       "Connected " +
-        fitnessMachine.device.id +
+        btServer.device.id + 
         ": " +
-        fitnessMachine.device.name
+        btServer.device.name
     );
   };
 
@@ -44,8 +42,8 @@ class App extends Component<{}, TbState> {
     return (
       <div className="App">
         <button onClick={this.scanForTrainers}>Scan for trainers</button>
-        <PowerDisplay Service={this.state.Service}></PowerDisplay>
-        <PowerControl Service={this.state.Service}></PowerControl>
+        <PowerDisplay Service={this.state.PowerRead}></PowerDisplay>
+        <PowerControl Service={this.state.PowerSet}></PowerControl>
       </div>
     );
   };
