@@ -2,18 +2,19 @@ import React, { Component } from "react";
 import "./App.css";
 import PowerDisplay from "./Power/Display";
 import PowerControl from "./Power/Control";
+import { getServices, getServer} from "./bluetooth";
 
 type TbState = {
-  Trainer?: BluetoothDevice;
-  Service?: BluetoothRemoteGATTService;
+  PowerRead?: BluetoothRemoteGATTService;
+  PowerSet?: BluetoothRemoteGATTService;
 };
 
 class App extends Component<{}, TbState> {
   constructor(props: Readonly<{}>) {
     super(props);
     this.state = {
-      Trainer: undefined,
-      Service: undefined
+      PowerRead: undefined,
+      PowerSet: undefined
     };
   }
 
@@ -21,35 +22,28 @@ class App extends Component<{}, TbState> {
     //this.scanForTrainers()
   };
 
-  scanForTrainers = () => {
+  scanForTrainers = async () => {
     let bluetoothServer = {} as TbState;
-    navigator.bluetooth
-      .requestDevice({
-        filters: [
-          {
-            services: ["cycling_power"]
-          }
-        ]
-      })
-      .then(device => {
-        bluetoothServer.Trainer = device;
-        device.gatt!.connect().then(server => {
-          server.getPrimaryService("cycling_power").then(service => {
-            bluetoothServer.Service = service;
-            this.setState(bluetoothServer);
-            console.log("Connected " + device.id + ": " + device.name);
-            console.log(bluetoothServer.Service);
-          });
-        });
-      });
+    const btServer = await getServer(
+      navigator.bluetooth
+    );
+
+    [ bluetoothServer.PowerRead, bluetoothServer.PowerSet ]= await getServices(btServer)
+    this.setState(bluetoothServer);
+    console.log(
+      "Connected " +
+        btServer.device.id + 
+        ": " +
+        btServer.device.name
+    );
   };
 
   render = () => {
     return (
       <div className="App">
         <button onClick={this.scanForTrainers}>Scan for trainers</button>
-        <PowerDisplay Service={this.state.Service}></PowerDisplay>
-        <PowerControl Service={this.state.Service}></PowerControl>
+        <PowerDisplay Service={this.state.PowerRead}></PowerDisplay>
+        <PowerControl Service={this.state.PowerSet}></PowerControl>
       </div>
     );
   };
