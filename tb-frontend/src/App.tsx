@@ -28,7 +28,7 @@ class App extends Component<{}, TbState> {
       navigator.bluetooth
     );
 
-    [ bluetoothServer.PowerRead, bluetoothServer.PowerSet ]= await getServices(btServer)
+    [ bluetoothServer.PowerRead, bluetoothServer.PowerSet ] = await getServices(btServer)
     this.setState(bluetoothServer);
     console.log(
       "Connected " +

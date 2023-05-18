@@ -1,21 +1,43 @@
 export async function requestControl(
   fitnessMachineService: BluetoothRemoteGATTService
 ) {
+  const writeRequest = await getControlPointCharacteristic(
+    fitnessMachineService,
+    "00002ad9-0000-1000-8000-00805f9b34fb"
+  );
 
+  try {
+    await writeRequest.writeValue(Uint8Array.of(0x00));
+  }
+  catch(e) { } // Ignore this error. on Tacx this command is required, Elite it isn't.
 }
 
 export async function setPower(
   fitnessMachineService: BluetoothRemoteGATTService,
   power: number
 ) {
-  const controlPoint = await getControlPointCharacteristic(
+  const writeCommand = await getControlPointCharacteristic(
     fitnessMachineService,
     "00002ad9-0000-1000-8000-00805f9b34fb"
   );
 
+  writeCommand.startNotifications();
+  writeCommand.oncharacteristicvaluechanged = event => {
+    const { value } = event.target as BluetoothRemoteGATTCharacteristic;
+    if (!value) {
+      return;
+    }
+
+    console.log("Write Result: " + value);
+  }
+
   console.log("Got control point characteristic");
-  // await controlPoint.writeValue(Uint8Array.of(0x05, power, power >> 8 & 0xFF));
-  // console.log("Wrote: " + power);
+  /* This field is weird:
+  On Tacx this is a "max power" - it releases until you're at the target power, but doesn't do anything if you're under
+  Is there an undocumented "min power" field we also need to set?
+  On Elite it locks the trainer to the value - I believe this is the correct implementation */
+  await writeCommand.writeValue(Uint8Array.of(0x05, power, power >> 8 & 0xFF));
+  console.log("Wrote: " + power);
 }
 
 export async function subscribeToPowerUpdates(
